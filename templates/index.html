@@ -1,0 +1,772 @@
+templates/index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview - Sarah Mitchell</title>
+    <script src="https://unpkg.com/livekit-client/dist/livekit-client.min.js"></script>
+
+    <style>
+        :root {
+            --primary-blue: #2563eb;
+            --secondary-blue: #1e40af;
+            --success-green: #059669;
+            --warning-amber: #d97706;
+            --danger-red: #dc2626;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--background);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            height: 100vh;
+            display: grid;
+            grid-template-areas: 
+                "header header"
+                "video sidebar"
+                "controls controls";
+            grid-template-rows: 60px 1fr 80px;
+            grid-template-columns: 1fr 320px;
+            gap: 0;
+        }
+
+        .header {
+            grid-area: header;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .company-branding {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .company-logo {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(45deg, var(--primary-blue), var(--secondary-blue));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .interview-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .interview-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .interview-status.waiting {
+            background: #fef3c7;
+            color: var(--warning-amber);
+        }
+
+        .interview-status.active {
+            background: #d1fae5;
+            color: var(--success-green);
+        }
+
+        .interview-status.ended {
+            background: #fee2e2;
+            color: var(--danger-red);
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+
+        .video-section {
+            grid-area: video;
+            background: #000;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .candidate-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .interviewer-overlay {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 240px;
+            height: 180px;
+            background: var(--surface);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            border: 3px solid var(--primary-blue);
+            overflow: hidden;
+        }
+
+        .interviewer-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .no-video {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #9ca3af;
+        }
+
+        .no-video .icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .sidebar {
+            grid-area: sidebar;
+            background: var(--surface);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            background: #f9fafb;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .interview-info {
+            margin-bottom: 24px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .controls {
+            grid-area: controls;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 20px;
+        }
+
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s ease;
+            background: #f3f4f6;
+            color: var(--text-primary);
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .control-btn.active {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .control-btn.muted {
+            background: var(--danger-red);
+            color: white;
+        }
+
+        .control-btn.disabled {
+            background: var(--danger-red);
+            color: white;
+        }
+
+        .end-interview-btn {
+            background: var(--danger-red) !important;
+            color: white;
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+        }
+
+        .control-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 8px;
+        }
+
+        .join-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .join-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            margin: 24px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .join-card h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .join-card p {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+        }
+
+        .join-btn {
+            width: 100%;
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .join-btn:hover {
+            background: var(--secondary-blue);
+        }
+
+        .join-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .hidden { display: none !important; }
+
+        @media (max-width: 768px) {
+            .app-container {
+                grid-template-areas: 
+                    "header"
+                    "video"
+                    "controls";
+                grid-template-columns: 1fr;
+                grid-template-rows: 60px 1fr 80px;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <div class="company-branding">
+                <div class="company-logo">AI</div>
+                <div class="interview-title">AI Interview Platform</div>
+            </div>
+            <div class="interview-status waiting" id="interviewStatus">
+                <div class="status-indicator"></div>
+                <span>Ready to connect</span>
+            </div>
+        </div>
+
+        <div class="video-section">
+            <div class="no-video" id="noVideo">
+                <div class="icon">👤</div>
+                <div>Camera initializing...</div>
+            </div>
+            <video id="candidateVideo" class="candidate-video hidden" autoplay muted playsinline></video>
+            
+            <div class="interviewer-overlay">
+                <video id="interviewerVideo" class="interviewer-video" autoplay playsinline></video>
+                <div class="no-video" id="noInterviewerVideo">
+                    <div style="font-size: 24px;">👩‍💼</div>
+                    <div style="font-size: 12px;">Sarah Mitchell</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Interview Details</h3>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="interview-info">
+                    <div class="info-item">
+                        <span class="info-label">Candidate:</span>
+                        <span class="info-value" id="candidateNameDisplay">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Position:</span>
+                        <span class="info-value" id="positionDisplay">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Interviewer:</span>
+                        <span class="info-value">Sarah Mitchell</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Duration:</span>
+                        <span class="info-value" id="durationDisplay">00:00</span>
+                    </div>
+                </div>
+
+                <div class="interview-tips">
+                    <h4 style="margin-bottom: 16px; color: var(--text-primary);">Interview Tips</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="margin: 8px 0; font-size: 14px; color: var(--text-secondary);">
+                            💡 Maintain eye contact with the camera
+                        </li>
+                        <li style="margin: 8px 0; font-size: 14px; color: var(--text-secondary);">
+                            💡 Speak clearly and confidently
+                        </li>
+                        <li style="margin: 8px 0; font-size: 14px; color: var(--text-secondary);">
+                            💡 Use specific examples in your answers
+                        </li>
+                        <li style="margin: 8px 0; font-size: 14px; color: var(--text-secondary);">
+                            💡 Ask thoughtful questions
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <div style="text-align: center;">
+                <button class="control-btn active" id="muteBtn" onclick="toggleMute()">🎤</button>
+                <div class="control-label">Microphone</div>
+            </div>
+            <div style="text-align: center;">
+                <button class="control-btn active" id="videoBtn" onclick="toggleVideo()">📹</button>
+                <div class="control-label">Camera</div>
+            </div>
+            <div style="text-align: center;">
+                <button class="control-btn end-interview-btn" onclick="endInterview()">📞</button>
+                <div class="control-label">End Interview</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="join-screen" id="joinScreen">
+        <div class="join-card">
+            <h1>Join AI Interview</h1>
+            <p>You're about to meet with Sarah Mitchell, our AI interviewer</p>
+            
+            <form onsubmit="startInterview(event)">
+                <div class="form-group">
+                    <label class="form-label">Your Full Name</label>
+                    <input type="text" class="form-input" id="candidateName" placeholder="e.g. John Smith" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Position Applied For</label>
+                    <input type="text" class="form-input" id="position" placeholder="e.g. Software Engineer" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Interview Room</label>
+                    <input type="text" class="form-input" id="roomName" value="interview-room" readonly>
+                </div>
+                <button type="submit" class="join-btn" id="joinBtn">
+                    Start Interview
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/livekit-client/dist/livekit-client.umd.js"></script>
+    <script>
+        // Wait for LiveKit to load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (typeof LiveKit === 'undefined') {
+                console.error('❌ LiveKit library failed to load');
+                alert('Error: Video call library failed to load. Please refresh the page.');
+                return;
+            }
+            console.log('✅ LiveKit library loaded successfully');
+        });
+
+        let room = null;
+        let localParticipant = null;
+        let isMuted = false;
+        let isVideoEnabled = true;
+        let interviewStartTime = null;
+        let durationInterval = null;
+
+        async function startInterview(event) {
+            event.preventDefault();
+            
+            const candidateName = document.getElementById('candidateName').value.trim();
+            const position = document.getElementById('position').value.trim();
+            const roomName = document.getElementById('roomName').value.trim();
+            const joinBtn = document.getElementById('joinBtn');
+
+            if (!candidateName || !position) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            joinBtn.disabled = true;
+            joinBtn.textContent = 'Connecting...';
+            updateInterviewStatus('waiting', 'Connecting...');
+
+            try {
+                // Call our Flask server to start interview and get token
+                const response = await fetch('/start-interview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        candidateName: candidateName,
+                        position: position,
+                        roomName: roomName
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to start interview');
+                }
+
+                // Create LiveKit room connection
+                room = new LiveKit.Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                    videoCaptureDefaults: {
+                        resolution: LiveKit.VideoPresets.h720.resolution,
+                    },
+                });
+
+                setupRoomEventListeners();
+                
+                // Connect to room using token from server
+                await room.connect(data.url, data.token);
+                
+                await enableMedia();
+                
+                // Update UI
+                document.getElementById('joinScreen').classList.add('hidden');
+                document.getElementById('candidateNameDisplay').textContent = candidateName;
+                document.getElementById('positionDisplay').textContent = position;
+                updateInterviewStatus('active', 'Interview in progress');
+                
+                localParticipant = room.localParticipant;
+                startInterviewTimer();
+
+                console.log('✅ Successfully joined interview room');
+
+            } catch (error) {
+                console.error('Failed to start interview:', error);
+                alert('Failed to start interview: ' + error.message);
+                joinBtn.disabled = false;
+                joinBtn.textContent = 'Start Interview';
+                updateInterviewStatus('waiting', 'Ready to connect');
+            }
+        }
+
+        async function enableMedia() {
+            try {
+                await room.localParticipant.setMicrophoneEnabled(true);
+                await room.localParticipant.setCameraEnabled(true);
+                attachLocalVideo();
+            } catch (error) {
+                console.error('Failed to enable media:', error);
+                alert('Please allow camera and microphone access');
+            }
+        }
+
+        function setupRoomEventListeners() {
+            room.on(LiveKit.RoomEvent.Connected, () => {
+                console.log('Connected to interview room');
+            });
+
+            room.on(LiveKit.RoomEvent.ParticipantConnected, (participant) => {
+                console.log('Participant joined:', participant.identity);
+                
+                if (participant.identity.includes('interviewer') || participant.identity.includes('sarah') || participant.identity.includes('agent')) {
+                    updateInterviewStatus('active', 'Sarah Mitchell joined');
+                    console.log('🎭 AI Interviewer Sarah Mitchell has joined!');
+                }
+            });
+
+            room.on(LiveKit.RoomEvent.ParticipantDisconnected, (participant) => {
+                console.log('Participant left:', participant.identity);
+                if (participant.identity.includes('interviewer') || participant.identity.includes('sarah')) {
+                    updateInterviewStatus('ended', 'Interview ended');
+                }
+            });
+
+            room.on(LiveKit.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                console.log('Track subscribed:', track.kind, participant.identity);
+                
+                if (track.kind === LiveKit.Track.Kind.Audio) {
+                    const audioElement = track.attach();
+                    document.body.appendChild(audioElement);
+                } else if (track.kind === LiveKit.Track.Kind.Video) {
+                    // Check if this is the interviewer's video
+                    if (participant.identity.includes('interviewer') || participant.identity.includes('sarah') || participant.identity.includes('agent')) {
+                        attachInterviewerVideo(track);
+                    }
+                }
+            });
+
+            room.on(LiveKit.RoomEvent.TrackUnsubscribed, (track, publication, participant) => {
+                track.detach();
+            });
+
+            room.on(LiveKit.RoomEvent.Disconnected, (reason) => {
+                console.log('Disconnected:', reason);
+                resetInterview();
+            });
+        }
+
+        function attachLocalVideo() {
+            const localVideoTrack = localParticipant.videoTracks.values().next().value;
+            if (localVideoTrack && localVideoTrack.track) {
+                const videoElement = document.getElementById('candidateVideo');
+                localVideoTrack.track.attach(videoElement);
+                videoElement.classList.remove('hidden');
+                document.getElementById('noVideo').classList.add('hidden');
+            }
+        }
+
+        function attachInterviewerVideo(track) {
+            const videoElement = document.getElementById('interviewerVideo');
+            track.attach(videoElement);
+            document.getElementById('noInterviewerVideo').classList.add('hidden');
+            console.log('🎥 Interviewer video attached');
+        }
+
+        function updateInterviewStatus(status, message) {
+            const statusElement = document.getElementById('interviewStatus');
+            statusElement.className = `interview-status ${status}`;
+            statusElement.querySelector('span').textContent = message;
+        }
+
+        function startInterviewTimer() {
+            interviewStartTime = new Date();
+            durationInterval = setInterval(() => {
+                const now = new Date();
+                const duration = Math.floor((now - interviewStartTime) / 1000);
+                const minutes = Math.floor(duration / 60);
+                const seconds = duration % 60;
+                document.getElementById('durationDisplay').textContent = 
+                    `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        async function toggleMute() {
+            if (!localParticipant) return;
+
+            try {
+                isMuted = !isMuted;
+                await localParticipant.setMicrophoneEnabled(!isMuted);
+                updateMuteButton();
+            } catch (error) {
+                console.error('Failed to toggle mute:', error);
+            }
+        }
+
+        async function toggleVideo() {
+            if (!localParticipant) return;
+
+            try {
+                isVideoEnabled = !isVideoEnabled;
+                await localParticipant.setCameraEnabled(isVideoEnabled);
+                updateVideoButton();
+            } catch (error) {
+                console.error('Failed to toggle video:', error);
+            }
+        }
+
+        function updateMuteButton() {
+            const btn = document.getElementById('muteBtn');
+            if (isMuted) {
+                btn.classList.remove('active');
+                btn.classList.add('muted');
+                btn.textContent = '🔇';
+            } else {
+                btn.classList.add('active');
+                btn.classList.remove('muted');
+                btn.textContent = '🎤';
+            }
+        }
+
+        function updateVideoButton() {
+            const btn = document.getElementById('videoBtn');
+            if (isVideoEnabled) {
+                btn.classList.add('active');
+                btn.classList.remove('disabled');
+                btn.textContent = '📹';
+            } else {
+                btn.classList.remove('active');
+                btn.classList.add('disabled');
+                btn.textContent = '📷';
+            }
+        }
+
+        async function endInterview() {
+            if (room) {
+                await room.disconnect();
+            }
+            resetInterview();
+        }
+
+        function resetInterview() {
+            document.getElementById('joinScreen').classList.remove('hidden');
+            updateInterviewStatus('ended', 'Interview ended');
+            
+            if (durationInterval) {
+                clearInterval(durationInterval);
+                durationInterval = null;
+            }
+            
+            room = null;
+            localParticipant = null;
+            isMuted = false;
+            isVideoEnabled = true;
+            interviewStartTime = null;
+            
+            // Reset UI elements
+            document.getElementById('candidateVideo').classList.add('hidden');
+            document.getElementById('noVideo').classList.remove('hidden');
+            document.getElementById('noInterviewerVideo').classList.remove('hidden');
+            document.getElementById('candidateNameDisplay').textContent = '-';
+            document.getElementById('positionDisplay').textContent = '-';
+            document.getElementById('durationDisplay').textContent = '00:00';
+            
+            updateMuteButton();
+            updateVideoButton();
+            
+            document.getElementById('joinBtn').disabled = false;
+            document.getElementById('joinBtn').textContent = 'Start Interview';
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎯 AI Interview Platform Ready');
+        });
+    </script>
+</body>
+</html>
